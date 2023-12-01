@@ -1,0 +1,12 @@
+env_type: 'CartPole-v1'
+# env_type : MountainCar-v0
+budget: 1000
+selection_strategy : UCT
+# selection_strategy : eps-Greedy
+discount: 1.0
+ucb_c: 1.0
+max_depth: 500
+eps: 0.2
+debug : False
+seed: 1
+
