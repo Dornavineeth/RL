@@ -2,7 +2,6 @@ import copy
 import numpy as np
 from typing import Any
 from time import sleep
-# import gymnasium as gym
 import gym
 
 import sys
@@ -44,8 +43,12 @@ class Selection:
             action: child.visit_sum/child.visits + self.config['ucb_c'] * np.sqrt(np.log(node.visits)/child.visits) if child.visits>0 else 10000 + np.random.rand(1).item()
             for action, child in node.children.items()
         }
-        # print(child_values)
-        action = max(child_values, key=child_values.get)
+        # Find the maximum value in the dictionary
+        max_value = max(child_values.values())
+        # Filter actions that have the maximum value
+        max_value_actions = [action for action, value in child_values.items() if value == max_value]
+        # Randomly sample an action from the list of actions with the maximum value
+        action = np.random.choice(max_value_actions)
         child = node.children[action]
         return action, child
 
@@ -58,8 +61,12 @@ class Selection:
             # Explore: choose a random action
             action = np.random.choice(list(child_values.keys()))
         else:
-            # Exploit: choose the action with the highest value
-            action = max(child_values, key=child_values.get)
+           # Find the maximum value in the dictionary
+            max_value = max(child_values.values())
+            # Filter actions that have the maximum value
+            max_value_actions = [action for action, value in child_values.items() if value == max_value]
+            # Randomly sample an action from the list of actions with the maximum value
+            action = np.random.choice(max_value_actions)
         child = node.children[action]
         return action, child
 
@@ -80,11 +87,22 @@ class MCTS:
     def select_child(self, node):
         if node.children is None:
             raise ValueError("select_child is called on nodes with no children :(")
+        if node.terminated:
+            raise ValueError("Selected is called on a terminal node")
         action, selected_node = self.selection(node)
+        # Only for stochastic things
+        env = copy.deepcopy(node.env)
+        observation, reward, terminated, info = env.step(action)
+        selected_node.env = env
+        selected_node.reward = reward
+        selected_node.observation = observation
+        selected_node.terminated = terminated
         return action, selected_node
 
     def expand(self, node, env):
         node.children = {}
+        if node.terminated:
+            raise ValueError("Expanding a terminal node")
         for action in range(env.action_space.n):
             env_copy = copy.deepcopy(env)
             observation, reward, terminated, info = env_copy.step(action)
@@ -93,8 +111,8 @@ class MCTS:
                 visit_sum=0.0,
                 parent=node,
                 observation=observation,
-                reward=reward,
-                terminated=terminated,
+                reward=0,#reward,
+                terminated=False,#terminated,
                 env=env_copy,
             )
             assert child_node.children is None, "expanded nodes cant have children"
@@ -117,11 +135,19 @@ class MCTS:
 
 
     def back_propogate(self, node, rollout_value):
+        if node.terminated:
+            node.visit_sum += node.reward # reward on terminal state
+            node.visits += 1
+            rollout_value = node.reward + (self.config['discount'] * rollout_value)
+            node = node.parent
         while node is not None:
+            if node is not None and node.terminated:
+                raise ValueError("Traj shouldnt have terminal state in between")
             node.visit_sum += rollout_value
             node.visits += 1
             rollout_value = node.reward + (self.config['discount'] * rollout_value)
             node = node.parent
+            
 
     def select_best_action(self, node):
         assert node.children is not None, "node has no children"
@@ -129,12 +155,20 @@ class MCTS:
             action: child.visit_sum/child.visits if child.visits > 0 else 0
             for action, child in node.children.items()
         }
-        action = max(child_values, key=child_values.get)
-        return action
+        max_value = max(child_values.values())
+        # Filter actions that have the maximum value
+        max_value_actions = [action for action, value in child_values.items() if value == max_value]
+
+        # Randomly sample an action from the list of actions with the maximum value
+        selected_action = np.random.choice(max_value_actions)
+        return selected_action
 
     def _print_root_node_stats(self, root_node):
         print("root_node visits ", root_node.visits)
-        print("root_node visits ", root_node.visits)
+        print("root_node visit_sum ", root_node.visit_sum)
+        for ch in root_node.children:
+            print(f"child {ch} visits ", root_node.children[ch].visits)
+            print(f"child {ch} visit_sum ", root_node.children[ch].visit_sum)
 
     def search(self, env, time_step):
         budget = self.config['budget']
@@ -192,9 +226,7 @@ class MCTS:
             if self.debug:
                 print(f"BackPropogate {it} : Done")
         best_action = self.select_best_action(root_node)
-        # if time_step ==100:
-        #     import pdb;pdb.set_trace()
-        # print()
+        self._print_root_node_stats(root_node)
         return best_action
 
     
@@ -214,48 +246,42 @@ def run_episode(config):
     np.random.seed(seed)
     env_type = config['env_type']
     env = get_env(env_type)
-    state = env.reset()
+    observation = env.reset()
     env.seed(seed)
-    env_orig = copy.deepcopy(env)
     actions_traj = []
     terminated = False
     agent = MCTSAgent(config)
     total_reward = 0
     time_step = 0
+    states_traj = []
     while not terminated:
+        # env.render()
+        states_traj.append(observation)
         action = agent.step(env, time_step)
+        actions_traj.append(action)
         observation, reward, terminated, info = env.step(action)
         total_reward = total_reward + (config['discount']**time_step)*reward
         print(action, observation, reward, terminated, info, total_reward)
         time_step+=1
+        sleep(0.5)
         if terminated:
             break
-        actions_traj.append(action)
-
-    terminated = False
-    np.random.seed(0)
-    for time_step, action in enumerate(actions_traj):
-        _, reward, terminated, _ = env_orig.step(action)
-        env_orig.render()
-        # sleep(0.05)
-        if terminated:
-            print(f"terminated at {time_step}, before finishing all acitons")
-            print(time_step, len(actions_traj))
-            break
-    return total_reward
+    return total_reward, time_step
 
 if __name__ == "__main__":
     config = {
-        'env_type': 'CartPole-v1',
-        'budget': 100,
+        'env_type' : 'gridworld',
+        # 'env_type': "MountainCar-v0",
+        'budget': 1000,
         'selection_strategy' : 'UCT',
-        # 'selection_strategy' : 'eps-Greedy',
         'discount': 1.0,
-        'ucb_c': 100.0,
-        'max_depth': 50,
+        'ucb_c': 50.0,
+        'max_depth': 200,
         'eps': 0.1,
         'debug' : False,
-        'seed': 0,
+        'seed': 1,
     }
     print(run_episode(config))
-    
+
+
+

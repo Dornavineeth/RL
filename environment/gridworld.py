@@ -1,5 +1,6 @@
 # import necessary libraries
 import gym
+import random
 import numpy as np
 from gym import spaces
 from copy import deepcopy
@@ -25,7 +26,7 @@ class TwoDGridWorld(gym.Env):
     RIGHT= 3
     BREAK = 4
     
-    def __init__(self, size, terminal_reward=10, water_reward= -10):
+    def __init__(self, size=5, terminal_reward=10, water_reward= -10):
         super(TwoDGridWorld, self).__init__()
         
         self.size      = size # size of the grid world
@@ -89,7 +90,6 @@ class TwoDGridWorld(gym.Env):
         
 
     def step(self, action):
-        print(action)
         info = {} # additional information
         _, action = self.sample_action(action, sample=True)
         
@@ -174,6 +174,10 @@ class TwoDGridWorld(gym.Env):
         self.agent_position = 0 # np.random.randint( (self.size*self.size) - 1 )
         
         return np.array([self.agent_position]).astype(np.uint8)
+    
+    def seed(self, seed: int) -> None:
+        random.seed(seed)
+        np.random.seed(seed)
     
     def close(self):
         pass

@@ -1,0 +1,9 @@
+env_type : gridworld
+budgets: [2, 5, 10, 100, 500, 1000, 10000]
+selection_strategy : UCT
+discount: 0.9
+ucb_c: 50.0
+eps: 0.1
+debug : False
+num_seeds: 10
+max_depth: 200

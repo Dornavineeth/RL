@@ -1,12 +1,12 @@
 env_type: 'CartPole-v1'
 # env_type : MountainCar-v0
-budgets: [2, 5, 10, 100]
+budgets: [2, 5, 10, 100, 500]
 selection_strategy : UCT
 # selection_strategy : eps-Greedy
 discount: 1.0
 ucb_c: 100.0
 eps: 0.1
 debug : False
-num_seeds: 5
+num_seeds: 10
 max_depth: 50
 
