@@ -1,1 +1,3 @@
 To run the algorithms, just run the Python files by setting the configuration in the main function. The files for the MDPs are different. PS_grid.py is for GridWorld, and cliff.py is for CliffWalking.
+To run for Gridworld: $ python PS_grid.py
+To run for CliffWalking: $ python cliff.py
