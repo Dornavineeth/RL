@@ -258,4 +258,3 @@ if __name__ == "__main__":
         'seed': 0,
     }
     print(run_episode(config))
-    

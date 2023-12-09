@@ -226,7 +226,7 @@ class MCTS:
             if self.debug:
                 print(f"BackPropogate {it} : Done")
         best_action = self.select_best_action(root_node)
-        self._print_root_node_stats(root_node)
+        # self._print_root_node_stats(root_node)
         return best_action
 
     
@@ -261,27 +261,57 @@ def run_episode(config):
         actions_traj.append(action)
         observation, reward, terminated, info = env.step(action)
         total_reward = total_reward + (config['discount']**time_step)*reward
-        print(action, observation, reward, terminated, info, total_reward)
+        # print(action, observation, reward, terminated, info, total_reward)
         time_step+=1
-        sleep(0.5)
+        # sleep(0.5)
         if terminated:
             break
     return total_reward, time_step
 
+def print_policy(policy, rows, cols):
+    for r in range(rows):
+        s = ""
+        for c in range(rows):
+            if (r,c) not in policy:
+                s += "\tO"
+            elif policy[(r,c)] == 0:
+                s += "\tu"
+            elif policy[(r,c)] == 2:
+                s += "\td"
+            elif policy[(r,c)] == 3:
+                s += "\tr"
+            elif policy[(r,c)] == 1:
+                s += "\tl"
+            elif policy[(r,c)] == 'G':
+                s += "\tG"
+        print(s.strip("\t"))
+
 if __name__ == "__main__":
     config = {
         'env_type' : 'gridworld',
-        # 'env_type': "MountainCar-v0",
         'budget': 1000,
         'selection_strategy' : 'UCT',
-        'discount': 1.0,
+        'discount': 0.9,
         'ucb_c': 50.0,
         'max_depth': 200,
         'eps': 0.1,
         'debug' : False,
         'seed': 1,
     }
-    print(run_episode(config))
+    # print(run_episode(config))
+    np.random.seed(config['seed'])
+    policy = {}
+    for row in range(5):
+        for col in range(5):
+            env_type = config['env_type']
+            env_kwargs = {"init_state":row*5+col}
+            env = get_env(env_type, **env_kwargs)
+            agent = MCTSAgent(config)
+            action = agent.step(env, 0)
+            policy[(row, col)] = action
+            print(f"({row}, {col}) : {action}")
+    print_policy(policy, 5, 5)        
+
 
 
 

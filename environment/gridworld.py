@@ -26,14 +26,14 @@ class TwoDGridWorld(gym.Env):
     RIGHT= 3
     BREAK = 4
     
-    def __init__(self, size=5, terminal_reward=10, water_reward= -10):
+    def __init__(self, size=5, terminal_reward=10, water_reward= -10, init_state=0):
         super(TwoDGridWorld, self).__init__()
         
         self.size      = size # size of the grid world
         self.end_state = size*size - 1 # bottom right or last cell
-        
+        self.init_state = init_state
         # randomly assign the inital location of agent
-        self.agent_position = 0 #np.random.randint( (self.size*self.size) - 1 )
+        self.agent_position = init_state #np.random.randint( (self.size*self.size) - 1 )
         
         # respective actions of agents : up, down, left and right
         self.action_space = spaces.Discrete(4)
@@ -171,7 +171,7 @@ class TwoDGridWorld(gym.Env):
 
     def reset(self):
         # -1 to ensure agent inital position will not be at the end state
-        self.agent_position = 0 # np.random.randint( (self.size*self.size) - 1 )
+        self.agent_position = self.init_state # np.random.randint( (self.size*self.size) - 1 )
         
         return np.array([self.agent_position]).astype(np.uint8)
     
